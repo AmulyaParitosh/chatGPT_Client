@@ -1,0 +1,9 @@
+cd /home/encryptedbee/tesla/projects/chatGPT_Client
+
+set -o allexport
+. ./.env
+set +o allexport
+
+. ./.venv/bin/activate
+
+python run.py --cli

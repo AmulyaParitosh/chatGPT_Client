@@ -1,0 +1,41 @@
+title = "chatGPT Client Configuration"
+
+[openai]
+api_key = "default"
+
+[bot]
+
+	name = "default"
+	stream = true
+	max_tokens = 1024
+	model = "gpt-3.5-turbo"
+	temperature = 0.7
+	top_p = 1
+	n = 1
+	stop = "None"
+
+	[bot.messages]
+	welcome = "Bot Initialised"
+	exit = "Bye Bye!"
+
+[user]
+name = "default"
+
+[cli]
+	[cli.symbols]
+	hr1 = "="
+	hr2 = "_"
+	welcome = "🤖"
+	exit = "🤖"
+	error = "✘"
+	user = "🟢"
+	bot = "🟨"
+
+	[cli.colors]
+	hr1 = "#7f8c8d"
+	hr2 = "#7f8c8d"
+	welcome = "#69b6f8"
+	exit = "#044289"
+	error = "#ff0000"
+	user  = "#59c703"
+	bot  = "#ffdc5d"
