@@ -10,8 +10,8 @@ class ChatBot(openai.ChatCompletion):
 
 		self._openai_api_key = config.get("openai").get("api_key", os.getenv("OPENAI_API_KEY"))
 		self._openai_api_key = os.getenv("OPENAI_API_KEY") if self._openai_api_key == "default" else self._openai_api_key
-
 		openai.api_key = self._openai_api_key
+
 		openai.ChatCompletion.__init__(self, engine, **kwargs)
 
 		self._init_user(config.get("user"))
