@@ -5,11 +5,12 @@ from CLI import utils
 
 class CliApplication:
 
-    def __init__(self):
+    def __init__(self, debug=False):
         with open("config.toml") as file:
             config = toml.loads(file.read())
 
         self.bot = ChatBot(config)
+        self._debug = debug
 
         print(utils.wellcome_str(self.bot.wellcome_message))
         print(utils.hr1())
@@ -32,7 +33,8 @@ class CliApplication:
                 exit()
 
             except Exception as exp:
-                raise
+                if self._debug:
+                    raise
                 print(utils.error_str(exp.with_traceback()))
                 print(utils.hr2())
                 continue

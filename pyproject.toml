@@ -5,6 +5,8 @@ description = "A chatGPT client application for desktop."
 authors = ["Amulya Paritosh <amulya1171@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+homepage = "https://github.com/AmulyaParitosh/chatGPT_Client"
+repository = "https://github.com/AmulyaParitosh/chatGPT_Client"
 packages = [{include = "chatgpt_client"}]
 
 [tool.poetry.dependencies]
