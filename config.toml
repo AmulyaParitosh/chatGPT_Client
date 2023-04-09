@@ -24,7 +24,7 @@ name = "default"
 [cli]
 	[cli.symbols]
 	hr1 = "="
-	hr2 = "_"
+	hr2 = "-"
 	welcome = "🤖"
 	exit = "🤖"
 	error = "✘"

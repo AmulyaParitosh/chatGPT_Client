@@ -1,4 +1,9 @@
+# project specific
 .env
+test.py
+todo.md
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -7,7 +7,6 @@ import openai
 
 class ChatBot(openai.ChatCompletion):
 	def __init__(self, config, engine: Optional[str] = None, **kwargs) -> None:
-
 		self._openai_api_key = config.get("openai").get("api_key", os.getenv("OPENAI_API_KEY"))
 		self._openai_api_key = os.getenv("OPENAI_API_KEY") if self._openai_api_key == "default" else self._openai_api_key
 		openai.api_key = self._openai_api_key
@@ -19,7 +18,8 @@ class ChatBot(openai.ChatCompletion):
 
 		self.memory : list[tuple[str, str]] = []
 
-	def _init_bot(self, config : Optional[dict]):
+
+	def _init_bot(self, config : Optional[dict]) -> None:
 		self.name = config.get("name", "chatGPT")
 		self.name = "chatGPT" if self.name == "default" else self.name
 		self.stream = bool(config.get("stream", False))
@@ -37,20 +37,20 @@ class ChatBot(openai.ChatCompletion):
 		self.exit_message = messages.get("exit", "Bye Bye!")
 
 
-	def _init_user(self, config : Optional[dict]):
+	def _init_user(self, config : Optional[dict]) -> None:
 		self.user_name = config.get("name", os.getenv("USER"))
 		self.user_name = os.getenv("USER") if self.user_name == "default" else self.user_name
 
 
 	def retrieve_last_response(self) -> tuple[str, str] | Literal['']:
-		return self.memory[-1] if len(self.memory) > 0 else ""
+		return self.memory[-1] if len(self.memory) > 0 else ''
 
 
 	def store_conversation(self, question, answer) -> None:
 		self.memory.append((question, answer))
 
-	def ask(self, prompt) -> str:
 
+	def ask(self, prompt) -> str:
 		last_response = self.retrieve_last_response()
 		if last_response:
 			prompt = f"{last_response} {prompt}"
@@ -69,9 +69,10 @@ class ChatBot(openai.ChatCompletion):
      		}]
 		)
 
+		# TODO Figure out a way to return the stream response rather than directly printing it
+
 		if self.stream:
 			collected_messages = []
-
 			for chunk in response:
 				chunk_message = chunk['choices'][0]['delta'].get("content", "")
 				collected_messages.append(chunk_message)
@@ -86,3 +87,5 @@ class ChatBot(openai.ChatCompletion):
 		self.store_conversation(prompt, answer)
 
 		return answer
+
+# TODO make GptWizard class
