@@ -70,16 +70,10 @@ class ChatBot(openai.ChatCompletion):
 		)
 
 		# TODO Figure out a way to return the stream response rather than directly printing it
+		print(response)
 
 		if self.stream:
-			collected_messages = []
-			for chunk in response:
-				chunk_message = chunk['choices'][0]['delta'].get("content", "")
-				collected_messages.append(chunk_message)
-				sys.stdout.write(chunk_message)
-				sys.stdout.flush()
-
-			answer : str = "".join(collected_messages)
+			return StreamResponse(response)
 
 		else:
 			answer : str = response.choices[0].message.content
@@ -87,5 +81,24 @@ class ChatBot(openai.ChatCompletion):
 		self.store_conversation(prompt, answer)
 
 		return answer
+
+
+class StreamResponse:
+	def __init__(self, response) -> None:
+		self.response = response
+		self.answer = None
+
+	def get_stream(self):
+		collected_messages = []
+		for chunk in self.response:
+			chunk_message = chunk['choices'][0]['delta'].get("content", "")
+			collected_messages.append(chunk_message)
+			yield chunk_message
+
+
+class Response:
+	def __init__(self, response) -> None:
+		self.response = response
+		self.answer = None
 
 # TODO make GptWizard class

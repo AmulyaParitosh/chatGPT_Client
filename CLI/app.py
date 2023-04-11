@@ -37,6 +37,6 @@ class CliApplication:
             except Exception as exp:
                 if self._debug:
                     raise
-                print(utils.error_str(exp.with_traceback()))
+                print(utils.error_str(exp))
                 print(utils.hr2())
                 continue
