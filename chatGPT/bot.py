@@ -1,9 +1,9 @@
 import os
-import sys
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 
 import openai
 
+from chatGPT.response import StreamedResponse, NonStreamedResponse
 
 class ChatBot(openai.ChatCompletion):
 	def __init__(self, config, engine: Optional[str] = None, **kwargs) -> None:
@@ -50,7 +50,7 @@ class ChatBot(openai.ChatCompletion):
 		self.memory.append((question, answer))
 
 
-	def ask(self, prompt) -> str:
+	def ask(self, prompt) -> Union[NonStreamedResponse, StreamedResponse]:
 		last_response = self.retrieve_last_response()
 		if last_response:
 			prompt = f"{last_response} {prompt}"
@@ -69,36 +69,14 @@ class ChatBot(openai.ChatCompletion):
      		}]
 		)
 
-		# TODO Figure out a way to return the stream response rather than directly printing it
-		print(response)
+		return self.responde(prompt, response)
 
-		if self.stream:
-			return StreamResponse(response)
-
+	def responde(self, prompt, response):
+		if isinstance(response, openai.openai_object.OpenAIObject):
+			return NonStreamedResponse(self, prompt, response)
 		else:
-			answer : str = response.choices[0].message.content
-
-		self.store_conversation(prompt, answer)
-
-		return answer
+			return StreamedResponse(self, prompt, response)
 
 
-class StreamResponse:
-	def __init__(self, response) -> None:
-		self.response = response
-		self.answer = None
-
-	def get_stream(self):
-		collected_messages = []
-		for chunk in self.response:
-			chunk_message = chunk['choices'][0]['delta'].get("content", "")
-			collected_messages.append(chunk_message)
-			yield chunk_message
-
-
-class Response:
-	def __init__(self, response) -> None:
-		self.response = response
-		self.answer = None
 
 # TODO make GptWizard class

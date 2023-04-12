@@ -6,4 +6,4 @@ set +o allexport
 
 . ./.venv/bin/activate
 
-python run.py --cli
+python run.py --cli --debug
