@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
-from typing import Literal
+from dataclasses import dataclass
+from typing import Generator, Literal
 
 class StopedGenerating(Exception):...
 
@@ -26,7 +27,7 @@ class Response(metaclass=ABCMeta):
 		self.prompt = prompt
 
 	@abstractmethod
-	def get(self) -> None:...
+	def get(self) -> Generator:...
 
 	@abstractmethod
 	def final_response(self) -> str:...
@@ -36,7 +37,7 @@ class StreamedResponse(Response):
 	def __init__(self, bot, prompt, response) -> None:
 		super().__init__(bot, prompt, response)
 
-	def get(self):
+	def get(self) -> Generator:
 		collected_messages = []
 		for chunk in self.response:
 			chunk_message = chunk['choices'][0]['delta'].get("content", "")
@@ -60,7 +61,7 @@ class NonStreamedResponse(Response):
 	def __init__(self, bot, prompt, response) -> None:
 		super().__init__(bot, prompt, response)
 
-	def get(self):
+	def get(self) -> Generator:
 		self.answer : str = self.response.choices[0].message.content
 		self._bot._memory.store_conversation(self.prompt, self.answer)
 		yield self.answer
@@ -73,3 +74,24 @@ class NonStreamedResponse(Response):
 			except StopIteration:
 				break
 		return self.answer
+
+@dataclass
+class Prompt:
+	value: str
+
+	def __str__(self) -> str:
+		return self.value
+
+@dataclass
+class Question:
+	value: str
+
+	def __str__(self) -> str:
+		return self.value
+
+@dataclass
+class Suggestion:
+	value: str
+
+	def __str__(self) -> str:
+		return self.value
