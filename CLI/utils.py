@@ -1,7 +1,4 @@
 import os
-import sys
-import termios
-import tty
 
 import toml
 from sty import bg, ef, fg, rs
@@ -17,8 +14,8 @@ with open("config.toml") as file:
 	config = toml.loads(file.read())
 
 config : dict = config.pop("cli")
-symbols : dict = config.get("symbols")
-colors : dict = config.get("colors")
+symbols : dict = config.get("symbols") # type: ignore
+colors : dict = config.get("colors") # type: ignore
 
 _text_format1 = f"\
 {'{symbol}'} \
@@ -50,11 +47,14 @@ def exit_str(text) -> str:
 def error_str(exp) -> str:
 	return f"\n\n{fg(*h2r(colors.get('error')))}{symbols.get('error')} there was as error!\n {exp}{ef.rs}"
 
+def stoped_generation() -> str:
+	return f"\n\n{fg(*h2r(colors.get('stop_generation')))}{symbols.get('stop_generation')} Response generation stopped!{ef.rs}"
+
 def hr1() -> str:
-	return f"{fg(*h2r(colors.get('hr1')))}{symbols.get('hr1') * os.get_terminal_size().columns}{fg.rs}"
+	return f"{fg(*h2r(colors.get('hr1')))}{symbols.get('hr1','') * os.get_terminal_size().columns}{fg.rs}"
 
 def hr2() -> str:
-	return f"{fg(*h2r(colors.get('hr2')))}{symbols.get('hr2') * os.get_terminal_size().columns}{fg.rs}"
+	return f"{fg(*h2r(colors.get('hr2')))}{symbols.get('hr2', '') * os.get_terminal_size().columns}{fg.rs}"
 
 def input_format(user_name) -> str:
 	return f"\n{fg(*h2r(colors.get('user')))}{symbols.get('user')} {user_name}{fg.rs} : "

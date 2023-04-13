@@ -1,38 +1,50 @@
 import sys
-from typing import NoReturn
+from abc import ABCMeta, abstractmethod
+from typing import Any, NoReturn
 
 import toml
 from pynput.keyboard import Key, Listener
 
-from chatGPT.bot import ChatBot
-from chatGPT.response import StopedGenerating
+from chatGPT.bot import ChatBot, ChatWizard
+from chatGPT.utils import StopedGenerating
 from CLI import utils
 
 
-class CliApplication:
-
-    def __init__(self, debug=False) -> None:
-        with open("config.toml") as file:
-            config = toml.loads(file.read())
-
-        self._bot = ChatBot(config)
-        self.__debug = debug
-        self.__answering = False
+class CliApp(metaclass=ABCMeta):
+    def __init__(self, debug : bool=False) -> None:
+        self._debug: bool = debug
+        self._answering = False
 
         listener = Listener(on_press=self.__on_press, on_release=self.__on_release, suppress=False)
         listener.start()
 
-        print(utils.wellcome_str(self._bot.wellcome_message))
-        print(utils.hr1())
-
     def __on_press(self, key) -> None:
         if key == Key.esc:
-            self.__answering = False
+            self._answering = False
 
     def __on_release(self, key) -> None:...
 
-    def __respond(self, response):
-        while self.__answering:
+    @abstractmethod
+    def run(self) -> NoReturn:...
+
+    @abstractmethod
+    def _chat(self) -> NoReturn:...
+
+
+class CliBot(CliApp):
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        with open("config.toml", 'r') as file:
+            config: dict[str, Any] = toml.loads(file.read())
+
+        self._bot = ChatBot(config)
+        print(utils.wellcome_str(self._bot.wellcome_message))
+        print(utils.hr1())
+
+
+    def __respond(self, response) -> None:
+        while self._answering:
             try:
                 resp = next(response)
                 sys.stdout.write(resp)
@@ -46,12 +58,12 @@ class CliApplication:
             raise StopedGenerating()
 
 
-    def _ask(self) -> None:
-        prompt = input(utils.input_format(self._bot.user_name))
+    def _chat(self) -> None:
+        prompt: str = input(utils.input_format(self._bot.user_name))
         print(utils.bot_format(self._bot.name), end="")
 
         response = self._bot.ask(prompt).get()
-        self.__answering = True
+        self._answering = True
         self.__respond(response)
 
 
@@ -59,10 +71,10 @@ class CliApplication:
 
         while True:
             try:
-                self._ask()
+                self._chat()
 
             except StopedGenerating:
-                print(utils.error_str("Stoped Generating response"))
+                print(utils.stoped_generation())
 
             except KeyboardInterrupt:
                 print("\n\n", utils.exit_str(self._bot.exit_message))
@@ -70,10 +82,29 @@ class CliApplication:
                 exit()
 
             except Exception as exp:
-                if self.__debug:
+                if self._debug:
                     raise
                 print(utils.error_str(exp))
                 print(utils.hr2())
 
             finally:
                 print(utils.hr2(), end="\n\n")
+
+
+class CliWizard(CliApp):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        with open("config.toml", 'r') as file:
+            config: dict[str, Any] = toml.loads(file.read())
+
+        self.wiz = ChatWizard(config)
+
+
+    def _chat(self) -> NoReturn:...
+
+
+    def __respond(self) -> None:
+        print("hello")
+
+
+    def run(self) -> NoReturn:...

@@ -5,7 +5,7 @@ api_key = "default"
 
 [bot]
 
-	name = "default"
+	name = "Servant"
 	stream = true
 	max_tokens = 1024
 	model = "gpt-3.5-turbo"
@@ -19,7 +19,7 @@ api_key = "default"
 	exit = "Bye Bye!"
 
 [user]
-name = "default"
+name = "Lord Amulya"
 
 [cli]
 	[cli.symbols]
@@ -28,6 +28,7 @@ name = "default"
 	welcome = "🤖"
 	exit = "🤖"
 	error = "✘"
+	stop_generation = "~"
 	user = "🟢"
 	bot = "🟨"
 
@@ -37,5 +38,6 @@ name = "default"
 	welcome = "#69b6f8"
 	exit = "#044289"
 	error = "#ff0000"
+	stop_generation = "#00b5e9"
 	user  = "#59c703"
 	bot  = "#ffdc5d"

@@ -2,7 +2,9 @@
 .env
 test.py
 todo.md
-
+chatGPT_Client.code-workspace
+.venv
+.vscode
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
