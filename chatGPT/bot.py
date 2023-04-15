@@ -1,5 +1,7 @@
+from curses.ascii import isdigit
 import os
 from typing import Generator, Optional, Union
+from threading import Thread
 
 import openai
 
@@ -24,6 +26,7 @@ class DaemonBot(Bot):
 		self.__base_prompt = "Answer in only one word, either True or False"
 		self.__closing_prompt_format = f"{'{prompt}'}. Am I asking you to close or go away? {self.__base_prompt}"
 		self.__generate_prompt_format = f"{'{prompt}'}. Am I asking you to finilise or I am happy or done? {self.__base_prompt}"
+		self._gen_final_resp = False
 
 
 	def __process_response(self, response : str) -> bool:
@@ -32,25 +35,24 @@ class DaemonBot(Bot):
 
 
 	def to_close(self, prompt : str) -> bool:
-		prompt = self.__closing_prompt_format.format(prompt)
+		prompt = self.__closing_prompt_format.format(prompt=prompt)
 		return self.__ask(prompt)
 
 
-	def to_gene_ans(self, prompt : str) -> bool:
-		prompt = self.__generate_prompt_format.format(prompt)
-		return self.__ask(prompt)
+	def to_gene_ans(self, prompt : str) -> None:
+		prompt = self.__generate_prompt_format.format(prompt=prompt)
+		self._gen_final_resp = self.__ask(prompt)
 
 
 	def __ask(self, prompt) -> bool:
 
 		response = self.chatGPT.create(
-			name = "Servant",
-			stream = False,
-			max_tokens = 1024,
 			model = "gpt-3.5-turbo",
+			max_tokens = 1024,
 			temperature = 0.7,
 			top_p = 1,
 			n = 1,
+			stream = False,
 			stop = "None",
 			messages = [{
 				"role" : "user",
@@ -136,9 +138,12 @@ class ChatWizard:
 		self.latest_suggestions: list[Suggestion] = []
 		self.latest_questions: list[Question] = []
 
+		self.__init_greet_thread = Thread(target=self.__initial_convo)
+		self.__init_greet_thread.start()
 
-	def __usages_info(self) -> Generator:
-		yield self.__uses_info_msg
+
+	def __usages_info(self) -> str:
+		return self.__uses_info_msg
 
 
 	def __finilize(self):
@@ -146,11 +151,11 @@ class ChatWizard:
 		return self.__bot.ask(self.latest_prompt)
 
 	def __prepare_prompt(self, chunk):
-		sen = " ".join(chunk).replace('"', '')
+		sen = "".join(chunk).strip()
 		return Prompt(sen)
 
 	def __prepare_sugg(self, chunk):
-		sen = " ".join(chunk).strip()
+		sen = "".join(chunk).strip()
 		chunk.clear()
 		if sen == '' : return
 		sen = Suggestion(sen)
@@ -158,7 +163,7 @@ class ChatWizard:
 		return sen
 
 	def __prepare_que(self, chunk):
-		sen = " ".join(chunk).strip()
+		sen = "".join(chunk).strip()
 		chunk.clear()
 		if sen == '' : return
 		sen = Question(sen)
@@ -168,9 +173,9 @@ class ChatWizard:
 	def __parse_prompt(self, response, chunk):
 		while True:
 
-			word = next(response)
+			word: str = next(response)
 
-			if word == "Suggestions:":
+			if word == "Suggestions" and next(response) == ':':
 				self.latest_prompt = self.__prepare_prompt(chunk)
 				chunk.clear()
 				break
@@ -182,14 +187,22 @@ class ChatWizard:
 
 	def __parse_sugg(self, response, chunk):
 		while True:
-			word = next(response)
+			word: str = next(response)
 
-			if word == "-":
+			if word == '.':
+				chunk.append(word)
 				yield self.__prepare_sugg(chunk)
 
-			elif word == "Questions:":
+			elif word == "Questions":
+				next(response)
 				yield self.__prepare_sugg(chunk)
 				break
+
+			elif word.isdigit():
+				next(response)
+
+			elif word == '-':
+				continue
 
 			else:
 				chunk.append(word)
@@ -197,13 +210,20 @@ class ChatWizard:
 	def __parse_que(self, response, chunk):
 		while True:
 			try:
-				word = next(response)
+				word: str = next(response)
 			except StopIteration:
 				yield self.__prepare_que(chunk)
 				break
 
-			if word == "-":
+			if word == '?':
+				chunk.append(word)
 				yield self.__prepare_que(chunk)
+
+			elif word.isdigit():
+				next(response)
+
+			elif word == '-':
+				continue
 
 			else:
 				chunk.append(word)
@@ -212,25 +232,42 @@ class ChatWizard:
 	def __parse_response(self, response : Generator):
 		chunk: list[str] = []
 
-		next(response)
-		next(response)
+		try:
+			while ''.join(chunk).lower() != "revised prompt:":
+				chunk.append(next(response))
+			else:
+				chunk.clear()
 
-		yield self.__parse_prompt(response, chunk)
-		yield self.__parse_sugg(response, chunk)
-		yield self.__parse_que(response, chunk)
+			yield self.__parse_prompt(response, chunk)
+
+			for sugg in self.__parse_sugg(response, chunk):
+				yield sugg
+
+			for que in self.__parse_que(response, chunk):
+				yield que
+
+		except StopIteration:
+			print("what the fuck!")
+
+
+	def __initial_convo(self):
+		self.__bot.ask(self.__wizard_prompt).final_response()
 
 
 	def wake(self) -> Generator:
 		yield self.__usages_info()
-		self.__bot.ask(self.__wizard_prompt)
 		yield self.__wizard_greeting
 
 
 	def converse(self, user_response) -> Generator:
+		t = Thread(target=self.__dbot.to_gene_ans, args=(user_response,))
+		t.start()
+		self.__init_greet_thread.join()
 		response = self.__bot.ask(user_response).get()
 
-		if self.__dbot.to_gene_ans(user_response):
-			return self.__finilize()
+		t.join()
+		if self.__dbot._gen_final_resp:
+			yield self.__finilize()
 
 		for item in self.__parse_response(response):
 			if isinstance(item, Question):

@@ -42,6 +42,7 @@ class StreamedResponse(Response):
 		for chunk in self.response:
 			chunk_message = chunk['choices'][0]['delta'].get("content", "")
 			collected_messages.append(chunk_message)
+			# print("chunk =", chunk_message)
 			yield chunk_message
 
 		self.answer = ''.join(collected_messages)

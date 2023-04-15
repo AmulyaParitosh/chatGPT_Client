@@ -107,4 +107,13 @@ class CliWizard(CliApp):
         print("hello")
 
 
-    def run(self) -> NoReturn:...
+    def run(self):
+        res = self.wiz.wake()
+        for r in res:
+            print(r)
+
+        while True:
+            user_resp = input("input : ")
+            res = self.wiz.converse(user_resp)
+            for i, r in enumerate(res, start=1):
+                print(f"Q{i}:",r)
