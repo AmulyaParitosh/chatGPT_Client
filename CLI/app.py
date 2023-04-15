@@ -6,7 +6,7 @@ import toml
 from pynput.keyboard import Key, Listener
 
 from chatGPT.bot import ChatBot, ChatWizard
-from chatGPT.utils import StopedGenerating
+from chatGPT.utils import Question, StopedGenerating
 from CLI import utils
 
 
@@ -115,5 +115,7 @@ class CliWizard(CliApp):
         while True:
             user_resp = input("input : ")
             res = self.wiz.converse(user_resp)
-            for i, r in enumerate(res, start=1):
-                print(f"Q{i}:",r)
+            for r in res:
+                if r is None: continue
+                if not isinstance(r, Question): continue
+                print("Q:",r)

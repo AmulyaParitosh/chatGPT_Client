@@ -1,12 +1,12 @@
-from curses.ascii import isdigit
 import os
-from typing import Generator, Optional, Union
 from threading import Thread
+from typing import Generator, Optional, Union
 
 import openai
 
-from chatGPT.utils import (Memory, NonStreamedResponse, Response,
-                           StreamedResponse, Prompt, Question, Suggestion)
+from chatGPT.utils import (Memory, NonStreamedResponse, Prompt, Question,
+                           Response, ResponseParser, StreamedResponse,
+                           Suggestion)
 
 
 class Bot:
@@ -128,7 +128,7 @@ class ChatBot(Bot):
 class ChatWizard:
 
 	__uses_info_msg: str = "I am a Chatter Wizard. I create the best possible responses for you. Just keep answering my questions to get my maggical response."
-	__wizard_prompt: str = "I want you to become my Prompt Creator. Your goal is to help me craft the best possible prompt for my needs. The prompt will be used by you, ChatGPT. You will follow the following process: 1. Your first response will be to ask me what the prompt should be about. I will provide my answer, but we will need to improve it through continual iterations by going through the next steps. 2. Based on my input, you will generate 3 sections. a) Revised prompt (provide your rewritten prompt. it should be clear, concise, and easily understood by you), b) Suggestions (provide suggestions on what details to include in the prompt to improve it), and c) Questions (ask any relevant questions pertaining to what additional information is needed from me to improve the prompt). 3. We will continue this iterative process with me providing additional information to you and you updating the prompt in the Revised prompt section until it's complete."
+	__wizard_prompt: str = "I want you to become my Prompt Creator. Your goal is to help me craft the best possible prompt for my needs. The prompt will be used by you, ChatGPT. You will follow the following process: 1. Your first response will be to ask me what the prompt should be about. I will provide my answer, but we will need to improve it through continual iterations by going through the next steps. 2. Based on my input, you will generate 3 sections. a) Revised prompt (provide your rewritten prompt. it should be clear, concise, and easily understood by you), b) Suggestions (provide suggestions in points on what details to include in the prompt to improve it), and c) Questions (ask any relevant questions in points pertaining to what additional information is needed from me to improve the prompt). 3. We will continue this iterative process with me providing additional information to you and you updating the prompt in the Revised prompt section until it's complete."
 	__wizard_greeting: str = "Greetings, my adventurous seeker of knowledge! As a wise wizard, I am here to guide you towards finding the answers to your questions. What topic intrigues you? Shall we explore ancient civilizations, the wonders of nature, or delve into the realm of magic and fantasy? Simply ask your question, and together we shall embark on a journey of learning and exploration. May the magic of knowledge guide us on our way!"
 
 	def __init__(self, config, engine: Optional[str] = None, **kwargs) -> None:
@@ -150,125 +150,29 @@ class ChatWizard:
 		self.__bot._memory.clear_memory()
 		return self.__bot.ask(self.latest_prompt)
 
-	def __prepare_prompt(self, chunk):
-		sen = "".join(chunk).strip()
-		return Prompt(sen)
 
-	def __prepare_sugg(self, chunk):
-		sen = "".join(chunk).strip()
-		chunk.clear()
-		if sen == '' : return
-		sen = Suggestion(sen)
-		self.latest_suggestions.append(sen)
-		return sen
-
-	def __prepare_que(self, chunk):
-		sen = "".join(chunk).strip()
-		chunk.clear()
-		if sen == '' : return
-		sen = Question(sen)
-		self.latest_questions.append(sen)
-		return sen
-
-	def __parse_prompt(self, response, chunk):
-		while True:
-
-			word: str = next(response)
-
-			if word == "Suggestions" and next(response) == ':':
-				self.latest_prompt = self.__prepare_prompt(chunk)
-				chunk.clear()
-				break
-
-			else:
-				chunk.append(word)
-
-		return self.latest_prompt
-
-	def __parse_sugg(self, response, chunk):
-		while True:
-			word: str = next(response)
-
-			if word == '.':
-				chunk.append(word)
-				yield self.__prepare_sugg(chunk)
-
-			elif word == "Questions":
-				next(response)
-				yield self.__prepare_sugg(chunk)
-				break
-
-			elif word.isdigit():
-				next(response)
-
-			elif word == '-':
-				continue
-
-			else:
-				chunk.append(word)
-
-	def __parse_que(self, response, chunk):
-		while True:
-			try:
-				word: str = next(response)
-			except StopIteration:
-				yield self.__prepare_que(chunk)
-				break
-
-			if word == '?':
-				chunk.append(word)
-				yield self.__prepare_que(chunk)
-
-			elif word.isdigit():
-				next(response)
-
-			elif word == '-':
-				continue
-
-			else:
-				chunk.append(word)
-
-
-	def __parse_response(self, response : Generator):
-		chunk: list[str] = []
-
-		try:
-			while ''.join(chunk).lower() != "revised prompt:":
-				chunk.append(next(response))
-			else:
-				chunk.clear()
-
-			yield self.__parse_prompt(response, chunk)
-
-			for sugg in self.__parse_sugg(response, chunk):
-				yield sugg
-
-			for que in self.__parse_que(response, chunk):
-				yield que
-
-		except StopIteration:
-			print("what the fuck!")
-
-
-	def __initial_convo(self):
+	def __initial_convo(self) -> None:
 		self.__bot.ask(self.__wizard_prompt).final_response()
 
 
-	def wake(self) -> Generator:
+	def wake(self) -> Generator[str, None, None]:
 		yield self.__usages_info()
 		yield self.__wizard_greeting
 
 
-	def converse(self, user_response) -> Generator:
-		t = Thread(target=self.__dbot.to_gene_ans, args=(user_response,))
-		t.start()
+	def converse(self, user_response):
+		# t = Thread(target=self.__dbot.to_gene_ans, args=(user_response,))
+		# t.start()
 		self.__init_greet_thread.join()
-		response = self.__bot.ask(user_response).get()
+		response: Generator[str, None, None] = self.__bot.ask(user_response).get()
 
-		t.join()
-		if self.__dbot._gen_final_resp:
-			yield self.__finilize()
+		# t.join()
+		# if self.__dbot._gen_final_resp:
+		# 	yield self.__finilize()
 
-		for item in self.__parse_response(response):
-			if isinstance(item, Question):
-				yield item.value
+		parser = ResponseParser(response)
+		return parser.parse()
+
+		# for item in parser.parse():
+		# 	# if isinstance(item, Question):
+		# 	yield item
